@@ -49,6 +49,10 @@
 	var React = __webpack_require__(1);
 	var ReactDOM = __webpack_require__(158);
 	var update = __webpack_require__(159);
+	var ShowForm = __webpack_require__(161);
+	var DisabledForm = __webpack_require__(162);
+	var EnabledForm = __webpack_require__(163);
+	var AddJob = __webpack_require__(164);
 
 	var MainForm = React.createClass({
 	  displayName: 'MainForm',
@@ -57,30 +61,39 @@
 	    return {
 	      clicked: false,
 	      formData: [],
-	      editMode: false
+	      editing: false,
+	      cancelEditing: false,
+	      index: 0
 	    };
 	  },
 
-	  handleChange: function handleChange() {
+	  setClickedState: function setClickedState() {
 	    this.setState({ clicked: true });
 	  },
 
-	  addToFormState: function addToFormState() {
-	    var inputValue = this.refs.inputValue.value;
-	    var dynoValue = this.refs.dyno.value;
-	    var frequencyValue = this.refs.frequency.value;
-	    var dueValue = this.refs.due.value;
-	    this.updateFormState(inputValue, dynoValue, frequencyValue, dueValue);
+	  passPropsToState: function passPropsToState(propsFromShowForm) {
+	    var inputValue = propsFromShowForm[0];
+	    var dynoValue = propsFromShowForm[1];
+	    var frequencyValue = propsFromShowForm[2];
+	    var dueValue = propsFromShowForm[3];
+	    this.setIndexState();
+	    this.setFormState(inputValue, dynoValue, frequencyValue, dueValue);
 	  },
 
-	  updateFormState: function updateFormState(inputValue, dynoValue, frequencyValue, dueValue) {
+	  setIndexState: function setIndexState() {
+	    var newIndexState = this.state.index += 1;
+	    this.setState({ index: newIndexState });
+	  },
+
+	  setFormState: function setFormState(inputValue, dynoValue, frequencyValue, dueValue) {
 	    var currentFormState = this.state.formData;
+	    console.log("your index in set form state is", this.state.index);
 	    var newFormState = update(currentFormState, { $unshift: [{
 	        inputText: inputValue,
 	        dynoText: dynoValue,
 	        frequencyText: frequencyValue,
 	        dueText: dueValue,
-	        index: ""
+	        index: this.state.index
 	      }] });
 	    this.setState({ formData: newFormState });
 	    this.changeStateOfFormToDefault();
@@ -90,281 +103,139 @@
 	    this.setState({ clicked: false });
 	  },
 
+	  enableEditing: function enableEditing() {
+	    this.setState({ editing: true });
+	    this.setState({ cancelEditing: true });
+	  },
+
+	  shouldComponentUpdate: function shouldComponentUpdate() {
+	    return this.state.formData;
+	  },
+
+	  saveUpdatedState: function saveUpdatedState(index, textInput, dynoText, frequencyText, dueText) {
+	    var _this = this;
+
+	    var newIndex = index;
+	    var newTextInput = textInput;
+	    var newDynoText = dynoText;
+	    var newFrequencyText = frequencyText;
+	    var newDueText = dueText;
+	    var formData = this.state.formData;
+	    formData.map(function (currentForm, formIndex) {
+	      if (currentForm.index == newIndex) {
+	        var currentFormIndex = _this.state.formData.indexOf(currentForm);
+	        var removeFormFromState = formData.slice(0, currentFormIndex);
+	        _this.setState({ formData: formData[currentFormIndex].textInput = newTextInput
+
+	        });
+	        var newForm = update(removeFormFromState, { $unshift: [{
+	            inputText: newTextInput,
+	            dynoText: newDynoText,
+	            frequencyText: newFrequencyText,
+	            dueText: newDueText,
+	            index: newIndex
+	          }] });
+	        _this.setState({ formData: newForm });
+	      }
+	    });
+	    this.cancelEditing();
+	  },
+
+	  showForms: function showForms(inputText, dynoText, frequencyText, dueText, index) {
+	    var editing = this.state.editing;
+	    if (editing) {
+	      return React.createElement(EnabledForm, {
+	        placeholderText: inputText,
+	        dynoText: dynoText,
+	        frequencyText: frequencyText,
+	        dueText: dueText,
+	        index: this.state.index,
+	        saveUpdatedState: this.saveUpdatedState,
+	        removeEnabledForm: this.removeForm
+	      });
+	    } else {
+	      return React.createElement(DisabledForm, {
+	        placeholderText: inputText,
+	        dynoText: dynoText,
+	        frequencyText: frequencyText,
+	        dueText: dueText,
+	        index: this.state.index,
+	        enableEditing: this.enableEditing,
+	        removeDisabledForm: this.removeForm
+	      });
+	    }
+	  },
+
+	  removeForm: function removeForm(index) {
+	    var _this2 = this;
+
+	    var formData = this.state.formData;
+	    formData.map(function (currentForm) {
+	      if (currentForm.index == index) {
+	        var indexOfCurrentForm = _this2.state.formData.indexOf(currentForm);
+	        var removeFromState = _this2.state.formData.splice(0, indexOfCurrentForm);
+	        _this2.setState({ formData: removeFromState });
+	      }
+	    });
+	  },
+
 	  renderAddNewJob: function renderAddNewJob() {
+	    var editing = this.state.editing;
 	    if (this.state.clicked) {
+	      return React.createElement(ShowForm, { passPropsToState: this.passPropsToState });
+	    } else if (!editing && !this.state.clicked) {
+	      return React.createElement(AddJob, { setClickedState: this.setClickedState });
+	    }
+	  },
+
+	  showEditButton: function showEditButton() {
+	    var cancelEditing = this.state.cancelEditing;
+	    var editing = this.state.editing;
+
+	    if (!editing && this.state.formData.length > 0) {
 	      return React.createElement(
 	        'div',
-	        null,
-	        React.createElement('input', { type: 'text',
-	          className: 'form-control',
-	          placeholder: 'Text input',
-	          ref: 'inputValue'
-	        }),
-	        React.createElement(
-	          'div',
-	          { className: 'form-group' },
-	          'Dyno Size',
-	          React.createElement(
-	            'select',
-	            { ref: 'dyno' },
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 1x '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 2x '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' px '
-	            )
-	          )
-	        ),
-	        React.createElement(
-	          'div',
-	          { className: 'form-group' },
-	          'Frequency',
-	          React.createElement(
-	            'select',
-	            { ref: 'frequency' },
-	            React.createElement(
-	              'option',
-	              null,
-	              ' Daily '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' Hourly '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' Every 10 minutes '
-	            )
-	          )
-	        ),
-	        React.createElement(
-	          'div',
-	          null,
-	          'Last Run',
-	          React.createElement(
-	            'p',
-	            null,
-	            ' Never '
-	          )
-	        ),
-	        React.createElement(
-	          'div',
-	          { className: 'form-group' },
-	          'Next Due',
-	          React.createElement(
-	            'span',
-	            null,
-	            ' Nov 24 '
-	          ),
-	          React.createElement(
-	            'select',
-	            { ref: 'due' },
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 1 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 2 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 3 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 4 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 5 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 6 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 7 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 8 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 9 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 10 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 11 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 12 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 13 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 14 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 15 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 16 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 17 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 18 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 19 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 20 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 21 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 22 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 23 '
-	            ),
-	            React.createElement(
-	              'option',
-	              null,
-	              ' 24 '
-	            )
-	          )
-	        ),
+	        { className: 'btn-group', role: 'group' },
 	        React.createElement(
 	          'button',
-	          { className: 'btn btn-primary',
-	            onClick: this.addToFormState },
-	          ' click me '
+	          { className: 'btn btn-primary', onClick: this.enableEditing },
+	          ' Edit '
 	        )
 	      );
-	    } else {
+	    } else if (cancelEditing && this.state.formData.length > 0) {
 	      return React.createElement(
 	        'div',
-	        null,
+	        { className: 'btn-group', role: 'group' },
 	        React.createElement(
 	          'button',
-	          { className: 'btn btn-primary',
-	            onClick: this.handleChange },
-	          ' Add new job '
+	          { className: 'btn btn-warning', onClick: this.cancelEditing },
+	          ' Cancel '
 	        )
 	      );
 	    }
 	  },
 
+	  cancelEditing: function cancelEditing() {
+	    this.setState({ editing: false });
+	  },
+
 	  render: function render() {
-	    var formData = this.state.formData.map(function (formData, index) {
-	      console.log(formData);
+	    var renderedForms = this.state.formData.map((function (formData, index) {
 	      return React.createElement(
 	        'div',
-	        null,
-	        React.createElement(
-	          'div',
-	          { key: index + formData.dueText },
-	          ' '
-	        ),
-	        React.createElement(
-	          'div',
-	          null,
-	          ' ',
-	          formData.inputText,
-	          ' '
-	        ),
-	        React.createElement(
-	          'div',
-	          null,
-	          ' ',
-	          formData.dynoText,
-	          ' '
-	        ),
-	        React.createElement(
-	          'div',
-	          null,
-	          ' ',
-	          formData.frequencyText,
-	          ' '
-	        ),
-	        React.createElement(
-	          'div',
-	          null,
-	          ' ',
-	          formData.dueText,
-	          ' '
-	        ),
-	        React.createElement(
-	          'div',
-	          null,
-	          ' ',
-	          index,
-	          ' '
-	        )
+	        { key: index + formData.dueText, className: 'parent' },
+	        this.showForms(formData.inputText, formData.dynoText, formData.frequencyText, formData.dueText, index)
 	      );
-	    });
+	    }).bind(this));
 	    return React.createElement(
 	      'div',
 	      null,
-	      formData,
+	      renderedForms,
+	      React.createElement(
+	        'div',
+	        { className: 'btn-group btn-group-justified', role: 'group', 'aria-label': '...' },
+	        this.showEditButton()
+	      ),
 	      this.renderAddNewJob()
 	    );
 	  }
@@ -20077,6 +19948,777 @@
 
 	module.exports = update;
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
+
+/***/ },
+/* 161 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var React = __webpack_require__(1);
+
+	var ShowForm = React.createClass({
+	  displayName: "ShowForm",
+
+	  propTypes: {
+	    passPropsToState: React.PropTypes.func
+	  },
+
+	  getProps: function getProps() {
+	    var propsAsArray = [];
+	    propsAsArray.push(this.refs.inputValue.value);
+	    propsAsArray.push(this.refs.dyno.value);
+	    propsAsArray.push(this.refs.frequency.value);
+	    propsAsArray.push(this.refs.due.value);
+	    this.props.passPropsToState(propsAsArray);
+	    propsAsArray.length = 0;
+	  },
+
+	  render: function render() {
+	    return React.createElement(
+	      "div",
+	      null,
+	      React.createElement("input", { type: "text",
+	        className: "form-control",
+	        placeholder: "Text input",
+	        ref: "inputValue"
+	      }),
+	      React.createElement(
+	        "div",
+	        { className: "form-group" },
+	        "Dyno Size",
+	        React.createElement(
+	          "select",
+	          { ref: "dyno" },
+	          React.createElement(
+	            "option",
+	            null,
+	            " 1x "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 2x "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " px "
+	          )
+	        )
+	      ),
+	      React.createElement(
+	        "div",
+	        { className: "form-group" },
+	        "Frequency",
+	        React.createElement(
+	          "select",
+	          { ref: "frequency" },
+	          React.createElement(
+	            "option",
+	            null,
+	            " Daily "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Hourly "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Every 10 minutes "
+	          )
+	        )
+	      ),
+	      React.createElement(
+	        "div",
+	        null,
+	        "Last Run",
+	        React.createElement(
+	          "p",
+	          null,
+	          " Never "
+	        )
+	      ),
+	      React.createElement(
+	        "div",
+	        { className: "form-group" },
+	        "Next Due",
+	        React.createElement(
+	          "span",
+	          null,
+	          " Nov 25 "
+	        ),
+	        React.createElement(
+	          "select",
+	          { ref: "due" },
+	          React.createElement(
+	            "option",
+	            null,
+	            " 1 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 2 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 3 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 4 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 5 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 6 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 7 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 8 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 9 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 10 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 11 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 12 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 13 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 14 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 15 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 16 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 17 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 18 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 19 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 20 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 21 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 22 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 23 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 24 "
+	          )
+	        )
+	      ),
+	      React.createElement(
+	        "button",
+	        { className: "btn btn-primary",
+	          onClick: this.getProps },
+	        " Submit form "
+	      )
+	    );
+	  }
+	});
+
+	module.exports = ShowForm;
+
+/***/ },
+/* 162 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var React = __webpack_require__(1);
+
+	var DisabledForm = React.createClass({
+	  displayName: "DisabledForm",
+
+	  propTypes: {
+	    placeholderText: React.PropTypes.string,
+	    dynoText: React.PropTypes.string,
+	    frequencyText: React.PropTypes.string,
+	    dueText: React.PropTypes.string,
+	    enableEditing: React.PropTypes.func,
+	    index: React.PropTypes.number,
+	    removeDisabledForm: React.PropTypes.func
+	  },
+
+	  turnOnEditMode: function turnOnEditMode() {
+	    this.props.enableEditing();
+	  },
+
+	  removeDisabledForm: function removeDisabledForm() {
+	    this.props.removeDisabledForm(this.props.index);
+	  },
+
+	  render: function render() {
+	    return React.createElement(
+	      "div",
+	      null,
+	      React.createElement("input", { type: "text",
+	        type: "text", className: "form-control",
+	        placeholder: this.props.placeholderText,
+	        value: this.props.placeholderText,
+	        disabled: true
+	      }),
+	      React.createElement(
+	        "div",
+	        null,
+	        " Dyno "
+	      ),
+	      React.createElement(
+	        "select",
+	        { disabled: true },
+	        React.createElement(
+	          "option",
+	          null,
+	          " ",
+	          this.props.dynoText,
+	          "  "
+	        ),
+	        React.createElement(
+	          "option",
+	          null,
+	          " 1x "
+	        ),
+	        React.createElement(
+	          "option",
+	          null,
+	          " 2x "
+	        ),
+	        React.createElement(
+	          "option",
+	          null,
+	          " px "
+	        )
+	      ),
+	      React.createElement(
+	        "div",
+	        { className: "form-group" },
+	        "Frequency",
+	        React.createElement(
+	          "select",
+	          { disabled: true },
+	          React.createElement(
+	            "option",
+	            { value: this.props.frequencyText },
+	            " ",
+	            this.props.frequencyText,
+	            " "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Daily "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Hourly "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Every 10 minutes "
+	          )
+	        )
+	      ),
+	      React.createElement(
+	        "div",
+	        { className: "form-group" },
+	        "Next Due",
+	        React.createElement(
+	          "span",
+	          null,
+	          " Nov 25 "
+	        ),
+	        React.createElement(
+	          "select",
+	          null,
+	          React.createElement(
+	            "option",
+	            { value: this.props.dueText, disabled: true },
+	            " ",
+	            this.props.dueText,
+	            " "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 2 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 3 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 4 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 5 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 6 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 7 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 8 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 9 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 10 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 11 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 12 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 13 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 14 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 15 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 16 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 17 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 18 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 19 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 20 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 21 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 22 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 23 "
+	          ),
+	          React.createElement(
+	            "option",
+	            { disabled: true },
+	            " 24 "
+	          )
+	        )
+	      ),
+	      React.createElement(
+	        "button",
+	        { className: "btn btn-danger", onClick: this.removeDisabledForm },
+	        " Remove "
+	      )
+	    );
+	  }
+	});
+
+	module.exports = DisabledForm;
+
+/***/ },
+/* 163 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var React = __webpack_require__(1);
+
+	var EnabledInputBox = React.createClass({
+	  displayName: "EnabledInputBox",
+
+	  propTypes: {
+	    placeholderText: React.PropTypes.string,
+	    dynoText: React.PropTypes.string,
+	    frequencyText: React.PropTypes.string,
+	    dueText: React.PropTypes.string,
+	    index: React.PropTypes.number,
+	    saveUpdatedState: React.PropTypes.func,
+	    removeEnabledForm: React.PropTypes.func
+	  },
+
+	  updateStateInParent: function updateStateInParent() {
+	    this.props.saveUpdatedState(this.props.index, this.refs.EnabledInput.value, this.refs.EnabledSelect.value, this.refs.EnabledFrequency.value, this.refs.EnabledDue.value, this.props.enabledEditingState, this.props.disableEditingState);
+	  },
+
+	  turnOffEditmode: function turnOffEditmode() {
+	    this.props.disableEditing();
+	  },
+
+	  removeEnabledForm: function removeEnabledForm() {
+	    this.props.removeEnabledForm(this.props.index);
+	  },
+
+	  render: function render() {
+	    return React.createElement(
+	      "div",
+	      null,
+	      React.createElement("input", { type: "text",
+	        type: "text", className: "form-control",
+	        placeholder: this.props.placeholderText,
+	        defaultValue: this.props.placeholderText,
+	        ref: "EnabledInput"
+	      }),
+	      React.createElement(
+	        "div",
+	        null,
+	        " Dyno "
+	      ),
+	      React.createElement(
+	        "select",
+	        { ref: "EnabledSelect" },
+	        React.createElement(
+	          "option",
+	          null,
+	          " ",
+	          this.props.dynoText,
+	          "  "
+	        ),
+	        React.createElement(
+	          "option",
+	          null,
+	          " 1x "
+	        ),
+	        React.createElement(
+	          "option",
+	          null,
+	          " 2x "
+	        ),
+	        React.createElement(
+	          "option",
+	          null,
+	          " px "
+	        )
+	      ),
+	      React.createElement(
+	        "div",
+	        { className: "form-group" },
+	        "Frequency",
+	        React.createElement(
+	          "select",
+	          { ref: "EnabledFrequency" },
+	          React.createElement(
+	            "option",
+	            { value: this.props.frequencyText },
+	            " ",
+	            this.props.frequencyText,
+	            " "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Daily "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Hourly "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " Every 10 minutes "
+	          )
+	        )
+	      ),
+	      React.createElement(
+	        "div",
+	        { className: "form-group" },
+	        "Next Due",
+	        React.createElement(
+	          "span",
+	          null,
+	          " Nov 25 "
+	        ),
+	        React.createElement(
+	          "select",
+	          { ref: "EnabledDue" },
+	          React.createElement(
+	            "option",
+	            { defaultValue: this.props.dueText },
+	            " ",
+	            this.props.dueText,
+	            " "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 2 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 3 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 4 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 5 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 6 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 7 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 8 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 9 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 10 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 11 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 12 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 13 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 14 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 15 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 16 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 17 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 18 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 19 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 20 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 21 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 22 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 23 "
+	          ),
+	          React.createElement(
+	            "option",
+	            null,
+	            " 24 "
+	          )
+	        )
+	      ),
+	      React.createElement("div", { ref: this.props.index }),
+	      React.createElement(
+	        "button",
+	        { className: "btn btn-success", onClick: this.updateStateInParent },
+	        " Save "
+	      ),
+	      React.createElement(
+	        "button",
+	        { className: "btn btn-danger", onClick: this.removeEnabledForm },
+	        " Remove "
+	      )
+	    );
+	  }
+	});
+
+	module.exports = EnabledInputBox;
+
+/***/ },
+/* 164 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var React = __webpack_require__(1);
+
+	var AddJob = React.createClass({
+	  displayName: "AddJob",
+
+	  propTypes: {
+	    setClickedState: React.PropTypes.func
+	  },
+
+	  render: function render() {
+	    return React.createElement(
+	      "button",
+	      { className: "btn btn-primary",
+	        onClick: this.props.setClickedState },
+	      " Add new job "
+	    );
+	  }
+	});
+
+	module.exports = AddJob;
 
 /***/ }
 /******/ ]);
